@@ -1,0 +1,10 @@
+
+# for compile
+toy
+toy.dSYM/
+
+# for eclipse
+.cproject
+.project
+.settings/
+
