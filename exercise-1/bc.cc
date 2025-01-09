@@ -3,6 +3,7 @@
  */
 
 #include <string>
+#include <cassert>
 
 enum {
   tok_identifier, tok_number, tok_eof,
@@ -57,11 +58,53 @@ int Error(const char *format, ...) {
 static int stack[10240];
 static int stack_idx = 0;
 
+void stack_push(const int &v) {
+  assert(stack_idx < sizeof(stack));
+
+  stack[stack_idx++] = v;
+}
+
+int stack_pop() {
+  assert(stack_idx > 0);
+
+  int v = stack[stack_idx - 1];
+  stack_idx--;
+  return v;
+}
+
+void stack_add() {
+  assert(stack_idx >= 2);
+
+  stack[stack_idx - 2] = stack[stack_idx - 2] + stack[stack_idx - 1];
+  stack_idx--;
+}
+
+void stack_sub() {
+  assert(stack_idx >= 2);
+
+  stack[stack_idx - 2] = stack[stack_idx - 2] - stack[stack_idx - 1];
+  stack_idx--;
+}
+
+void stack_mul() {
+  assert(stack_idx >= 2);
+
+  stack[stack_idx - 2] = stack[stack_idx - 2] * stack[stack_idx - 1];
+  stack_idx--;
+}
+
+void stack_div() {
+  assert(stack_idx >= 2);
+
+  stack[stack_idx - 2] = stack[stack_idx - 2] / stack[stack_idx - 1];
+  stack_idx--;
+}
+
 int expression();
 
 int expr_number() {
   fprintf(stderr, " PUSH %d\n", Value);
-  stack[stack_idx++] = Value;
+  stack_push(Value);
 
   getNextToken();
   return 0;
@@ -71,7 +114,7 @@ int expr_neg_number() {
   getNextToken(); // eat -
 
   fprintf(stderr, " PUSH %d\n", -Value);
-  stack[stack_idx++] = -Value;
+  stack_push(-Value);
 
   getNextToken();
   return 0;
@@ -114,9 +157,7 @@ int expr_mul_or_div() {
       return r;
     fprintf(stderr, " %s\n", Op == '*' ? "MUL" : "DIV");
 
-    stack[stack_idx - 2] =
-        Op == '*' ? stack[stack_idx - 2] * stack[stack_idx - 1] : stack[stack_idx - 2] / stack[stack_idx - 1];
-    stack_idx--;
+    Op == '*' ? stack_mul() : stack_div();
   }
   return 0;
 }
@@ -134,9 +175,7 @@ int expr_add_or_sub() {
       return r;
     fprintf(stderr, " %s\n", Op == '+' ? "ADD" : "SUB");
 
-    stack[stack_idx - 2] =
-        Op == '+' ? stack[stack_idx - 2] + stack[stack_idx - 1] : stack[stack_idx - 2] - stack[stack_idx - 1];
-    stack_idx--;
+    Op == '+' ? stack_add() : stack_sub();
   }
   return 0;
 }
@@ -150,12 +189,17 @@ int expression() {
 }
 
 int mainLoop() {
+  fprintf(stderr, "> ");
+  getNextToken();
+
   while (true) {
+
     switch (CurToken) {
       case tok_eof:
         return 0;
       case ';':
-        fprintf(stderr, " Result=%d\n", stack[stack_idx - 1]);
+        fprintf(stderr, "%d\n", stack_pop());
+        fprintf(stderr, "> ");
 
         getNextToken();
         break;
@@ -172,7 +216,5 @@ int mainLoop() {
 }
 
 int main() {
-  getNextToken();
-
   return mainLoop();
 }
